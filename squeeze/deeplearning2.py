@@ -9,7 +9,6 @@ import sys
 import csv
 from PIL import Image
 
-
 def imread_resize(path):
     img_orig = scipy.misc.imread(path)
     img = scipy.misc.imresize(img_orig, (227, 227)).astype(np.float)
@@ -30,7 +29,6 @@ def get_dtype_np():
 
 def get_dtype_tf():
     return tf.float32
-
 
 # SqueezeNet v1.1 (signature pool 1/3/5)
 ########################################
@@ -191,74 +189,62 @@ def _pool_layer(net, name, input, pooling, size=(2, 2), stride=(3, 3), padding='
 
 
 def main():
-    file_names = []
-    class_labels = []
-    with open('annotations.txt') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',')
-        for row in reader:
-            # print(','.join(row))
-            file_names.append(row[1])
-            class_labels.append(row[0])
+    array=[]
+    file="annotations.txt"
+    
+    with open(file) as csv_file:
+        csv_reader=csv.reader(csv_file,delimiter=",")
+        for row in csv_reader:
+             array.append(row)
+    filename=[]
+    csv_classes=[]
+    for x in array:
+        csv_classes.append(x[0])
+        filename.append(x[1])
+    print(csv_classes)
+    print(filename)
+    count=0
+    matches=0
+    for imgname in filename:
+        # Loading image
+        img_content, orig_shape = imread_resize(imgname)
+        img_content_shape = (1,) + img_content.shape
 
-    # print(file_names)
-    # print(class_labels)
-    length = len(file_names)
-    incorrect = 0
-    i = 0
-    while i < length:
-        predicted = prediction(file_names[i])
-        
-        if not(class_labels[i] in predicted):
-            print("Failure!: prediction: '%s' is not equal to actual: '%s' for '%s'" % (
-                predicted, class_labels[i], file_names[i]))
-            incorrect += 1
-        else:
-            print("Success!: prediction: '%s' is equal to actual: '%s' for '%s'" % (
-                predicted, class_labels[i], file_names[i]))
-        i += 1
-    print("Total number of incorrect predictions is: [%d]" % incorrect)
-
-
-def prediction(fileName):  # def main():
-    # imgname=sys.argv[1]
-    imgname = fileName
-    # Loading image
-    img_content, orig_shape = imread_resize(imgname)
-    img_content_shape = (1,) + img_content.shape
-
-    # Loading ImageNet classes info
-    classes = []
-    with open('synset_words.txt', 'r') as classes_file:
-        classes = classes_file.read().splitlines()
+        # Loading ImageNet classes info
+        classes = []
+        with open('synset_words.txt', 'r') as classes_file:
+            classes = classes_file.read().splitlines()
 
     # Loading network
-    data, sqz_mean = load_net('sqz_full.mat')
+        data, sqz_mean = load_net('sqz_full.mat')
 
-    config = tf.ConfigProto(log_device_placement=False)
-    config.gpu_options.allow_growth = True
-    config.gpu_options.allocator_type = 'BFC'
+        config = tf.ConfigProto(log_device_placement=False)
+        config.gpu_options.allow_growth = True
+        config.gpu_options.allocator_type = 'BFC'
 
-    g = tf.Graph()
+        g = tf.Graph()
 
     # 1st pass - simple classification
-    with g.as_default(), tf.Session(config=config) as sess:
+        with g.as_default(), tf.Session(config=config) as sess:
         # Building network
-        image = tf.placeholder(dtype=get_dtype_tf(), shape=img_content_shape, name="image_placeholder")
-        keep_prob = tf.placeholder(get_dtype_tf())
-        sqznet = net_preloaded(data, image, 'max', True, keep_prob)
+            image = tf.placeholder(dtype=get_dtype_tf(), shape=img_content_shape, name="image_placeholder")
+            keep_prob = tf.placeholder(get_dtype_tf())
+            sqznet = net_preloaded(data, image, 'max', True, keep_prob)
 
         # Classifying
-        sqznet_results = \
-            sqznet['classifier_actv'].eval(feed_dict={image: [preprocess(img_content, sqz_mean)], keep_prob: 1.})[0][0][
-                0]
+            sqznet_results = \
+            sqznet['classifier_actv'].eval(feed_dict={image: [preprocess(img_content, sqz_mean)], keep_prob: 1.})[0][0][0]
 
         # Outputting result
-        sqz_class = np.argmax(sqznet_results)
-        print(
-            "\nclass: [%d] '%s' with %5.2f%% confidence" % (
-                sqz_class, classes[sqz_class], sqznet_results[sqz_class] * 100))
-        return classes[sqz_class]
-
+            sqz_class = np.argmax(sqznet_results)
+            #print(
+            #"\nclass: [%d] '%s' with %5.2f%% confidence" % (sqz_class, classes[sqz_class], sqznet_results[sqz_class] * 100))
+            x=classes[sqz_class].split()
+            #csv_classes[count].split()
+            if(x[0]==csv_classes[count]):
+              matches=matches+1
+            count=count+1
+    print(matches)
 
 if __name__ == '__main__':
     main()
