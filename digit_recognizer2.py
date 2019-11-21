@@ -109,8 +109,17 @@ def show_inference_results(image_filename, infer_labels: List[str],
         print(one_prediction)
 
     print('-----------------------------------------------------------')
+    
 from imutils.video import VideoStream
 
+def process_image(img):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    (thresh, img) = cv2.threshold(img, 65, 255, cv2.THRESH_BINARY)
+    height, width = img.shape
+    img = img[0:height, int((width / 2) - (height / 2)):int((width / 2) + (height / 2))]
+    img = cv2.resize(img, (28, 28))
+    img = cv2.bitwise_not(img)
+    return img
 
 def main():
     """ Main function, return an int for program return value
@@ -131,14 +140,18 @@ def main():
         frame=vs.read()
         image_for_inference=frame.copy()
 
-        image_for_inference = cv2.cvtColor(image_for_inference, cv2.COLOR_BGR2GRAY)
-
-        image_for_display=image_for_inference
+        #image_for_inference = cv2.cvtColor(image_for_inference, cv2.COLOR_BGR2GRAY)
+        #image_for_display=image_for_inference
+        
         image_for_display=cv2.resize(image_for_inference, (200,200))
-        image_for_inference=cv2.resize(image_for_inference, NETWORK_IMAGE_DIMENSIONS)
-        image_for_inference = image_for_inference.astype(numpy.float32)
-        image_for_inference[:] = ((image_for_inference[:] )*(1.0/255.0))
+        image_for_inference=cv2.process_image(image_for_inference)
+        
+        #image_for_inference=cv2.resize(image_for_inference, NETWORK_IMAGE_DIMENSIONS)
+        #image_for_inference = image_for_inference.astype(numpy.float32)
+        #image_for_inference[:] = ((image_for_inference[:] )*(1.0/255.0))
+        
         cv2.imshow("mnist",image_for_display)
+        cv2.imshow("big", cv2.resize(image_for_inference, (200, 200)))
         cv2.waitKey(1)
         time.sleep(.25)
         infer_labels, infer_probabilities = do_inference(fifo_in,fifo_out,graph, image_for_inference, 5)
