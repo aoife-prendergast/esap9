@@ -237,14 +237,15 @@ def main():
 
         # Outputting result
             sqz_class = np.argmax(sqznet_results)
-            #print(
-            #"\nclass: [%d] '%s' with %5.2f%% confidence" % (sqz_class, classes[sqz_class], sqznet_results[sqz_class] * 100))
+            with open("predictions.txt", "a") as myfile:
+                myfile.write("\nclass: [%d] '%s' with %5.2f%% confidence" % (sqz_class, classes[sqz_class], sqznet_results[sqz_class] * 100))
             x=classes[sqz_class].split()
             #csv_classes[count].split()
             if(x[0]==csv_classes[count]):
               matches=matches+1
             count=count+1
-    print(matches)
+    with open("predictions.txt", "a") as myfile:
+        myfile.write(matches)
 
 if __name__ == '__main__':
     main()
