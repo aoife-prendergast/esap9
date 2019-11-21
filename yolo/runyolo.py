@@ -10,7 +10,7 @@ import cv2
 import time
 from imutils.video import VideoStream
 
-tiny_yolo_graph_file= #TODO: Assign this to the name of the pretrained yolo graph file. 
+tiny_yolo_graph_file= "graph" #TODO: Assign this to the name of the pretrained yolo graph file.
 
 
 NETWORK_IMAGE_WIDTH = 448
@@ -26,7 +26,7 @@ def filter_objects(inference_result, input_image_width, input_image_height):
                                "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike",
                                "person", "pottedplant", "sheep", "sofa", "train","tvmonitor"]
 
-    probability_threshold = #TODO: The yolo algorithm gives a probability that a given object is at a specific "box". This variable is used to filter out results that yolo is not confident in. Valid numbers are between 0 and 1. If you pick a number too large, very little will be recognized, if you pick a number too small the number of false detections will increase. 
+    probability_threshold = 0.05 # TODO: The yolo algorithm gives a probability that a given object is at a specific "box". This variable is used to filter out results that yolo is not confident in. Valid numbers are between 0 and 1. If you pick a number too large, very little will be recognized, if you pick a number too small the number of false detections will increase.
 
     num_classifications = len(network_classifications) # should be 20
     grid_size = 7 # the image is a 7x7 grid.  Each box in the grid is 64x64 pixels
@@ -233,18 +233,18 @@ def main():
 
     # Set logging level to only log errors
     mvnc.global_set_option(mvnc.GlobalOption.RW_LOG_LEVEL, 3)
-    devices = #TODO use the mvnc API to querydevices. 
+    devices = mvnc.enumerate_devices()  # TODO use the mvnc API to querydevices.
     if len(devices) == 0:
         print('No devices found')
         return 1
-    device = #TODO: use the mvnc API to assign the first device in devices to the device variable. 
+    device = mvnc.Device(devices[0])  # TODO: use the mvnc API to assign the first device in devices to the device variable.
     device.open()
 
     #Load graph from disk and allocate graph via API
     with open(tiny_yolo_graph_file, mode='rb') as f:
         graph_from_disk = f.read()
     graph = mvnc.Graph("Tiny Yolo Graph")
-    fifo_in, fifo_out = #TODO: Instantiate fifo_in and fifo_out using the graph file above. 
+    fifo_in, fifo_out = graph.allocate_with_fifos(device, graph_from_disk)  # TODO: Instantiate fifo_in and fifo_out using the graph file above.
 
     # Read image from file, resize it to network width and height
     # save a copy in display_image for display, then convert to float32, normalize (divide by 255),
@@ -257,11 +257,12 @@ def main():
         display_image = cv2.resize(input_image, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT), cv2.INTER_LINEAR)
         input_image = cv2.resize(input_image, (NETWORK_IMAGE_WIDTH, NETWORK_IMAGE_HEIGHT), cv2.INTER_LINEAR)
         input_image = input_image.astype(np.float32)
-        input_image = # TODO: Scale values between 0 and 255
+        input_image = (input_image*(1.0/255.0))# TODO: Scale values between 0 and 255
         input_image = input_image[:, :, ::-1]  # convert to RGB
 
         #TODO: Use the queue_inference_with_fifo_elem to load the image and get the result from the NCS. This should be one line of code.
-        
+
+        graph.queue_inference_with_fifo_elem(fifo_in, fifo_out, input_image.astype(np.float32), None)
         output, userobj = fifo_out.read_elem()
 
         # filter out all the objects/boxes that don't meet thresholds
