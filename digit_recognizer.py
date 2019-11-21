@@ -31,7 +31,7 @@ def do_initialize():
     device = mvnc.Device(devices[0])
     device.open()
 
-    graph_filename = "mnist_inference.graph"
+    graph_filename = "inference.graph"
 
     # Load graph file
     try :
